@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <video id="webcam" autoplay playsinline width="640" height="480"></video>
+
+    <button id="start-camera">Start Camera</button>
+
+    <script>
+    const video = document.getElementById('webcam');
+    const btn = document.getElementById('start-camera');
+
+    btn.addEventListener('click', async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: true, 
+                audio: false
+            });
+            video.srcObject = stream;
+        } catch (error) {
+            console.error("Error accessing the camera: ", error);
+            alert("Could not access camera. Check HTTPS or permissions.");
+        }
+    });
+</script> 
+</body>
+</html>
