@@ -22,7 +22,6 @@
         const btn = document.getElementById('start-camera');
         let detector;
 
-        // Initialize the AI detector
         async function initDetector() {
             const model = handPoseDetection.SupportedModels.MediaPipeHands;
             const detectorConfig = {
@@ -32,19 +31,24 @@
             detector = await handPoseDetection.createDetector(model, detectorConfig);
         }
 
-        // Continually detect and draw hand landmarks
         async function detectHands() {
             if (detector && video.readyState >= 2) {
-                const hands = await detector.estimateHands(video); //
+                // The AI detects based on the video source
+                const hands = await detector.estimateHands(video); 
                 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
                 if (hands.length > 0) {
+                    // Calculate the scaling ratio between video source and screen display
+                    const displaySize = video.getBoundingClientRect();
+                    const scaleX = displaySize.width / video.videoWidth;
+                    const scaleY = displaySize.height / video.videoHeight;
+
                     hands.forEach(hand => {
                         hand.keypoints.forEach(keypoint => {
-                            // Draw a small red circle for each hand landmark
                             ctx.beginPath();
-                            ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
+                            // Multiply raw coordinates by the scale to align with screen pixels
+                            ctx.arc(keypoint.x * scaleX, keypoint.y * scaleY, 5, 0, 2 * Math.PI);
                             ctx.fillStyle = "red";
                             ctx.fill();
                         });
@@ -61,12 +65,13 @@
 
                 await initDetector();
                 
-                // Adjust canvas size to match the camera feed
-                video.addEventListener('loadeddata', () => {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                video.onloadedmetadata = () => {
+                    const displaySize = video.getBoundingClientRect();
+                    // Set canvas to match the CSS visual size exactly
+                    canvas.width = displaySize.width;
+                    canvas.height = displaySize.height;
                     detectHands();
-                });
+                };
             } catch (error) {
                 console.error("Camera error:", error);
             }
