@@ -2,28 +2,75 @@
 <html>
 <head>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/hand-pose-detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
 </head>
 <body>
-    <video id="webcam" autoplay playsinline width="640" height="480"></video>
+    <div class="container">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="output-canvas"></canvas>
+    </div>
 
     <button id="start-camera">Start Camera</button>
 
     <script>
-    const video = document.getElementById('webcam');
-    const btn = document.getElementById('start-camera');
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('output-canvas');
+        const ctx = canvas.getContext('2d');
+        const btn = document.getElementById('start-camera');
+        let detector;
 
-    btn.addEventListener('click', async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: true, 
-                audio: false
-            });
-            video.srcObject = stream;
-        } catch (error) {
-            console.error("Error accessing the camera: ", error);
-            alert("Could not access camera. Check HTTPS or permissions.");
+        // Initialize the AI detector
+        async function initDetector() {
+            const model = handPoseDetection.SupportedModels.MediaPipeHands;
+            const detectorConfig = {
+                runtime: 'mediapipe',
+                solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands'
+            };
+            detector = await handPoseDetection.createDetector(model, detectorConfig);
         }
-    });
-</script> 
+
+        // Continually detect and draw hand landmarks
+        async function detectHands() {
+            if (detector && video.readyState >= 2) {
+                const hands = await detector.estimateHands(video); //
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                if (hands.length > 0) {
+                    hands.forEach(hand => {
+                        hand.keypoints.forEach(keypoint => {
+                            // Draw a small red circle for each hand landmark
+                            ctx.beginPath();
+                            ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
+                            ctx.fillStyle = "red";
+                            ctx.fill();
+                        });
+                    });
+                }
+            }
+            requestAnimationFrame(detectHands);
+        }
+
+        btn.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+
+                await initDetector();
+                
+                // Adjust canvas size to match the camera feed
+                video.addEventListener('loadeddata', () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    detectHands();
+                });
+            } catch (error) {
+                console.error("Camera error:", error);
+            }
+        });
+    </script> 
 </body>
 </html>
