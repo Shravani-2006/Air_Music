@@ -1,41 +1,388 @@
-body {
+* {
+    box-sizing: border-box;
     margin: 0;
-    display: flex;
-    flex-direction: column; 
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #f0f0f0;
+    padding: 0;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #121212;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
 }
 
 .container {
     position: relative;
-    /* Sets the window to half of the screen width */
-    width: 50vw; 
-    /* Maintains a standard camera aspect ratio */
-    aspect-ratio: 4 / 3; 
-    border: 5px solid #333;
-    border-radius: 10px;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     overflow: hidden;
-    background-color: black;
 }
 
-video, canvas {
+video {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    /* Important: ensures both layers stretch identically */
-    object-fit: fill; 
+    object-fit: cover; 
+    transform: scaleX(-1);
 }
 
-canvas {
-    z-index: 10;
+#overlay-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 }
 
-button {
-    margin-top: 20px;
-    padding: 10px 20px;
+#overlay-canvas {
+    z-index: 30; /* Drawn over everything else (like hands and picks) */
+    pointer-events: none;
+}
+
+#start-camera {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 15px 30px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 40px;
+    font-size: 20px;
+    font-weight: bold;
     cursor: pointer;
+    transition: background-color 0.3s;
+    z-index: 50;
+}
+
+#start-camera:hover {
+    background-color: #0056b3;
+}
+
+/* Mode Toggle */
+.mode-toggle {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    z-index: 40;
+    display: flex;
+    background: rgba(0,0,0,0.6);
+    border-radius: 30px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.2);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.mode-toggle button {
+    background: transparent;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.mode-toggle button.active {
+    background: #007bff;
+}
+
+.mode-toggle button:hover:not(.active) {
+    background: rgba(255,255,255,0.1);
+}
+
+/* Drum Kit */
+.drum-kit {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 20;
+}
+
+.drum-pad {
+    position: absolute;
+    pointer-events: auto; /* Required for hit detection */
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: rgba(255,255,255,0.8);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    transition: all 0.1s;
+}
+
+.drum-pad span {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    font-size: 20px;
+}
+
+.drum-pad.active {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(1.1);
+    box-shadow: 0 0 30px rgba(255,255,255,0.8);
+}
+
+/* Drum Layout */
+.kick { width: 200px; height: 200px; bottom: 5%; left: 50%; transform: translateX(-50%); border-color: #ff4757; }
+.kick.active { transform: translateX(-50%) scale(1.1); box-shadow: 0 0 30px #ff4757; }
+.snare { width: 150px; height: 150px; bottom: 25%; left: 25%; border-color: #1e90ff; }
+.snare.active { box-shadow: 0 0 30px #1e90ff; }
+.hihat { width: 140px; height: 140px; top: 20%; left: 15%; border-color: #eccc68; }
+.hihat.active { box-shadow: 0 0 30px #eccc68; }
+.tom1 { width: 130px; height: 130px; top: 15%; left: 40%; border-color: #2ed573; }
+.tom1.active { box-shadow: 0 0 30px #2ed573; }
+.floor-tom { width: 160px; height: 160px; bottom: 15%; right: 20%; border-color: #9b59b6; }
+.floor-tom.active { box-shadow: 0 0 30px #9b59b6; }
+.crash { width: 170px; height: 170px; top: 15%; right: 15%; border-color: #ffa502; }
+.crash.active { box-shadow: 0 0 30px #ffa502; }
+
+
+/* Guitar Kit - Horizontal Acoustic Guitar */
+.guitar-kit {
+    position: absolute;
+    top: auto;
+    bottom: 5%;
+    left: 0;
+    width: 100%;
+    height: auto;
+    pointer-events: none;
+    z-index: 20;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.acoustic-guitar {
+    position: relative;
+    width: 95vw;
+    max-width: 1200px;
+    height: 480px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    pointer-events: none;
+    transform: scale(1) rotate(15deg); /* Scaled up, tilted for realistic posture */
+    transform-origin: 75% 50%; /* Pivot around the body/hip area */
+}
+
+.guitar-neck {
+    position: relative;
+    width: 55%;
+    height: 150px;
+    background: #3e2723;
+    display: flex;
+    flex-direction: row;
+    border-top: 2px solid #5d4037;
+    border-bottom: 2px solid #5d4037;
+    z-index: 21;
+}
+
+.fret-column {
+    flex: 1;
+    border-right: 2px solid silver; /* Vertical fret bars */
+    pointer-events: auto; 
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.fret-marker {
+    width: 15px;
+    height: 15px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 50%;
+    position: absolute;
+}
+
+.fret-label {
+    position: absolute;
+    bottom: -30px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+    font-weight: bold;
+}
+
+.guitar-body {
+    position: relative;
+    width: 45%;
+    height: 480px;
+    background: radial-gradient(circle at center, #ffcca8 0%, #e59a59 50%, #8c4b26 90%, #5e2f15 100%);
+    border-radius: 50% 40% 40% 50% / 45% 35% 35% 45%; 
+    border: 8px solid #3e1f0e;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.6), 0 20px 40px rgba(0,0,0,0.8);
+    z-index: 20;
+    margin-left: -30px; /* Overlap with neck */
+}
+
+.guitar-soundhole {
+    position: absolute;
+    width: 130px;
+    height: 130px;
+    background: #111;
+    border-radius: 50%;
+    left: 20%;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 6px solid #d4a373;
+    box-shadow: inset 0 0 20px black;
+}
+
+.guitar-pickguard {
+    position: absolute;
+    width: 160px;
+    height: 90px;
+    background: #1a0f08;
+    border-radius: 50% 50% 50% 10%;
+    left: 25%;
+    top: 55%;
+    transform: rotate(-10deg);
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.1);
+}
+
+.guitar-bridge {
+    position: absolute;
+    width: 30px;
+    height: 180px;
+    background: #3e2723;
+    right: 15%;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 5px;
+    box-shadow: 5px 0 10px rgba(0,0,0,0.5);
+}
+
+.strings-container {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 93.25%; /* 55% neck + 85% of 45% body */
+    height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 22; 
+    pointer-events: none;
+}
+
+.guitar-string {
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(to bottom, #d4a373, #faedcd, #d4a373);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.9);
+    position: relative;
+    pointer-events: auto; /* Required for hit detection */
+    transition: all 0.1s;
+}
+
+.guitar-string.vibrating {
+    height: 8px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.5) 0%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.5) 100%);
+    box-shadow: 0 0 15px white;
+    transform: scaleY(1.8);
+}
+
+/* Piano */
+.piano-scroll-wrapper {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90vw; 
+    height: 350px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    border-radius: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 10px;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    z-index: 20;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.3) transparent;
+}
+.piano-scroll-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+.piano-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: rgba(255,255,255,0.3);
+    border-radius: 4px;
+}
+
+.piano {
+    position: relative;
+    display: flex;
+    height: 100%;
+    width: max-content; 
+    perspective: 1000px;
+}
+
+.key {
+    box-sizing: border-box;
+    cursor: pointer;
+    transform-origin: top;
+    transition: transform 0.1s, background-color 0.1s;
+}
+
+.key.white {
+    width: 100px; 
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.8);
+    z-index: 20;
+    backdrop-filter: blur(2px);
+}
+
+.key.black {
+    position: absolute;
+    top: 0;
+    width: 60px; 
+    height: 60%;
+    background-color: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transform: translateX(-50%);
+    z-index: 21;
+    backdrop-filter: blur(2px);
+}
+
+.key.white.active {
+    background-color: rgba(255, 255, 255, 0.6);
+    transform: rotateX(-5deg);
+}
+
+.key.black.active {
+    background-color: rgba(100, 100, 100, 0.8);
+    transform: translateX(-50%) rotateX(-5deg);
+}
+
+.loading-text {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    display: none;
+    z-index: 100;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
